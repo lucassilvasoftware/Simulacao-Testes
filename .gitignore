@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+.mutmut-cache/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

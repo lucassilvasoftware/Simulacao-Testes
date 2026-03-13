@@ -47,30 +47,49 @@
 
 \section{Introdução}
 
-Neste laboratório foi desenvolvido um programa simples de \emph{caixa eletrônico}
-com cinco funcionalidades principais e um conjunto de testes automatizados.
-Foram aplicadas técnicas de teste de mutação manual e automática (\texttt{mutmut})
-para avaliar a eficácia da suíte de testes.
+Este relatório descreve o Laboratório 05 da disciplina CC8550 (Simulação e Teste de Software), cujo objetivo é aplicar \emph{teste de mutação} para avaliar a qualidade de uma suíte de testes. Foi desenvolvido um programa simples de caixa eletrônico com cinco funcionalidades e, em seguida, criados mutantes manualmente e configurada a ferramenta \texttt{mutmut} para mutação automática. Ao executar os testes no código original, todos passam; ao executá-los no código mutado, as falhas indicam que os mutantes foram ``mortos'', permitindo calcular o Mutation Score (MS) e comparar com os resultados do \texttt{mutmut} quando disponíveis.
 
 \section{Descrição do Programa}
 
-O sistema de caixa eletrônico foi implementado no arquivo
-\texttt{caixa\_eletronico.py}. As cinco funcionalidades principais são:
+O sistema foi implementado no arquivo \texttt{caixa\_eletronico.py}. Uma \textbf{conta} é representada por um \emph{dataclass} com: \texttt{numero} (identificador), \texttt{saldo} (float) e \texttt{historico} (lista de strings com as operações realizadas). As cinco funcionalidades são:
 
 \begin{enumerate}
-  \item Consulta de saldo (\texttt{consultar\_saldo});
-  \item Depósito em conta (\texttt{depositar});
-  \item Saque em conta (\texttt{sacar});
-  \item Transferência entre contas (\texttt{transferir});
-  \item Emissão de extrato (\texttt{extrato}).
+  \item \texttt{consultar\_saldo(conta)} --- retorna o saldo atual;
+  \item \texttt{depositar(conta, valor)} --- credita o valor e registra no histórico (valor deve ser positivo);
+  \item \texttt{sacar(conta, valor)} --- debita o valor e registra (valor positivo e saldo suficiente);
+  \item \texttt{transferir(conta\_origem, conta\_destino, valor)} --- debita da origem e credita no destino, com registro em ambas (origem e destino devem ser contas diferentes; valor positivo);
+  \item \texttt{extrato(conta)} --- retorna a lista do histórico na ordem cronológica.
 \end{enumerate}
+
+Regras de negócio: depósito e saque rejeitam valor $\leq 0$; saque rejeita valor maior que o saldo; transferência rejeita mesma conta e valor $\leq 0$. O histórico de cada conta é independente.
 
 \section{Estratégia de Testes}
 
-Os testes foram escritos com \texttt{pytest} no arquivo
-\texttt{test\_caixa\_eletronico.py}. Foram especificados dez casos de teste,
-cobrindo depósitos válidos e inválidos, saques válidos e inválidos,
-transferências e extrato.
+Os testes foram escritos com \texttt{pytest} no arquivo \texttt{test\_caixa\_eletronico.py}. Existem \textbf{dez} casos de teste, listados na Tabela~\ref{tab:testes}, cobrindo as cinco funcionalidades e cenários de sucesso e de exceção.
+
+\begin{table}[H]
+  \centering
+  \caption{Casos de teste e regras verificadas}
+  \label{tab:testes}
+  \begin{tabular}{lll}
+    \toprule
+    Teste & Funcionalidade & O que verifica \\
+    \midrule
+    \texttt{test\_saldo\_inicial\_zero} & consultar\_saldo & Saldo inicial 0 \\
+    \texttt{test\_deposito\_aumenta\_saldo} & depositar & Depósito aumenta saldo \\
+    \texttt{test\_nao\_permite\_deposito\_negativo\_ou\_zero} & depositar & Rejeita 0 e valor negativo \\
+    \texttt{test\_saque\_diminui\_saldo} & sacar & Saque debita corretamente \\
+    \texttt{test\_nao\_permite\_saque\_maior\_que\_saldo} & sacar & Rejeita saque acima do saldo \\
+    \texttt{test\_pode\_sacar\_todo\_saldo} & sacar & Permite sacar 100\% do saldo \\
+    \texttt{test\_transferencia\_move\_saldo\_correto} & transferir & Valores corretos origem/destino \\
+    \texttt{test\_nao\_permite\_transferencia\_para\_mesma\_conta} & transferir & Rejeita mesma conta \\
+    \texttt{test\_extrato\_registra\_operacoes\_na\_ordem} & extrato & Ordem cronológica do histórico \\
+    \texttt{test\_contas\_tem\_historicos\_independentes} & extrato & Históricos não compartilhados \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Ao rodar \texttt{pytest} no código original, os dez testes passam.
 
 \section{Mutantes Manuais}
 
@@ -78,11 +97,16 @@ transferências e extrato.
 
 Um \textbf{mutante morto} é uma versão do programa em que foi introduzida uma alteração (mutação) e, ao rodar a suíte de testes, \emph{pelo menos um teste falha}. Isso indica que os testes detectaram a diferença entre o código original e o mutado: o defeito simulado foi revelado e o mutante é considerado ``morto'' pela suíte. Já um \textbf{mutante sobrevivente} é aquele em que todos os testes continuam passando mesmo com o código alterado; nesse caso, a suíte não conseguiu distinguir o mutante do programa original, o que sugere lacuna na cobertura ou na assertividade dos testes. O objetivo é ter uma suíte que mate o máximo possível de mutantes (alto Mutation Score).
 
-Foi criada uma cópia do código em \texttt{caixa\_eletronico\_mutante.py}
-com mutantes manuais (ex.: permitir depósito zero; impedir saque de todo o saldo;
-transferência na direção errada; extrato em ordem invertida).
+Foi criada uma cópia do código em \texttt{caixa\_eletronico\_mutante.py} com \textbf{quatro} mutantes manuais:
 
-Fórmula do Mutation Score:
+\begin{itemize}
+  \item \textbf{Mutante 1 (depositar):} condição alterada de \texttt{valor <= 0} para \texttt{valor < 0}, permitindo depósito de R\$ 0,00. Morto por \texttt{test\_nao\_permite\_deposito\_negativo\_ou\_zero}.
+  \item \textbf{Mutante 2 (sacar):} condição \texttt{valor > conta.saldo} trocada por \texttt{valor >= conta.saldo}, impedindo sacar todo o saldo. Morto por \texttt{test\_pode\_sacar\_todo\_saldo}.
+  \item \textbf{Mutante 3 (transferir):} ordem invertida --- \texttt{sacar(conta\_destino, valor)} e \texttt{depositar(conta\_origem, valor)}. Morto por \texttt{test\_transferencia\_move\_saldo\_correto}.
+  \item \textbf{Mutante 4 (extrato):} \texttt{return list(conta.historico)} trocado por \texttt{return list(reversed(conta.historico))}. Morto por \texttt{test\_extrato\_registra\_operacoes\_na\_ordem}.
+\end{itemize}
+
+Ao executar a mesma suíte de testes no código mutante (importando \texttt{caixa\_eletronico\_mutante}), vários testes falham; cada mutante é detectado por pelo menos um teste. Fórmula do Mutation Score:
 \[
 MS = \frac{\text{mutantes mortos}}{\text{mutantes totais} - \text{mutantes equivalentes}} \times 100\%.
 \]
@@ -93,44 +117,42 @@ MS = \frac{\text{mutantes mortos}}{\text{mutantes totais} - \text{mutantes equiv
   \label{tab:mutantes-manuais}
   \begin{tabular}{lcc}
     \toprule
-    & Quantidade & MS (\%) \\
+    & Quantidade & \\
     \midrule
-    Mutantes totais                & (preencher) & \\
-    Mutantes equivalentes           & (preencher) & \\
-    Mutantes mortos                 & (preencher) & \\
-    Mutantes sobreviventes          & (preencher) & \\
+    Mutantes totais                & 4 & \\
+    Mutantes equivalentes         & 0 & \\
+    Mutantes mortos               & 4 & \\
+    Mutantes sobreviventes        & 0 & \\
     \midrule
-    \textbf{Mutation Score (MS)}    & & (preencher) \\
+    \textbf{Mutation Score (MS)}  & $4/4 = 100\%$ & \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \section{Mutação Automática com \texttt{mutmut}}
 
-Foi utilizada a ferramenta \texttt{mutmut} (configurada em \texttt{pyproject.toml}).
-Comandos: \texttt{mutmut run} e \texttt{mutmut results}.
+A ferramenta \texttt{mutmut} foi configurada no \texttt{pyproject.toml}: mutação em \texttt{caixa\_eletronico.py}, diretório de testes no próprio projeto e runner \texttt{python -m pytest}. Os comandos para execução são \texttt{mutmut run} (gera e executa os mutantes) e \texttt{mutmut results} (exibe o resumo). No ambiente Windows o \texttt{mutmut} não é suportado nativamente; a documentação oficial recomenda o uso de WSL (Windows Subsystem for Linux) ou um ambiente Linux. Ao rodar em WSL/Linux, preencher a tabela abaixo com os números exibidos por \texttt{mutmut results} e calcular o MS pela mesma fórmula.
 
 \begin{table}[H]
   \centering
-  \caption{Resultados do \texttt{mutmut}}
+  \caption{Resultados do \texttt{mutmut} (preencher após executar em WSL/Linux)}
   \label{tab:mutmut}
   \begin{tabular}{lcc}
     \toprule
-    & Quantidade & MS (\%) \\
+    & Quantidade & \\
     \midrule
     Mutantes totais                & (preencher) & \\
-    Mutantes equivalentes           & (preencher) & \\
-    Mutantes mortos                 & (preencher) & \\
-    Mutantes sobreviventes          & (preencher) & \\
+    Mutantes equivalentes         & (preencher) & \\
+    Mutantes mortos                & (preencher) & \\
+    Mutantes sobreviventes        & (preencher) & \\
     \midrule
-    \textbf{Mutation Score (MS)}    & & (preencher) \\
+    \textbf{Mutation Score (MS)}   & (preencher) & \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \section{Discussão e Conclusão}
 
-(Comparar resultados dos mutantes manuais com os do \texttt{mutmut};
-discutir mutantes sobreviventes e possíveis novos testes.)
+Nos mutantes manuais, a suíte de testes matou os quatro mutantes introduzidos, resultando em Mutation Score de 100\% para esse conjunto. Isso indica que os testes cobrem bem as regras alteradas: rejeição de depósito zero/negativo, possibilidade de sacar todo o saldo, direção correta da transferência e ordem cronológica do extrato. O \texttt{mutmut} gera mutantes automaticamente (troca de operadores, constantes, etc.) em maior quantidade; ao executá-lo em WSL, é possível obter um MS global e comparar com o resultado manual. Mutantes sobreviventes do \texttt{mutmut} sugerem pontos em que a suíte poderia ser reforçada com novos testes ou asserções mais específicas. Em resumo, o teste de mutação complementa a cobertura estrutural ao avaliar se os testes são capazes de detectar defeitos simulados, e neste laboratório a abordagem manual mostrou-se eficaz para os quatro cenários escolhidos.
 
 \end{document}
